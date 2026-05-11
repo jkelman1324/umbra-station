@@ -1,4 +1,5 @@
 import requests
+import json
 
 def get_coordinates():
     try:
@@ -10,7 +11,20 @@ def get_coordinates():
 
 def main():
     lat, lon = get_coordinates()
-    print(f"Latitude: {lat} | Longitude: {lon}")
+
+    try:
+        response = requests.get(f"https://api.weather.gov/points/{lat},{lon}")
+        data = response.json()
+        url = data['properties']['forecast']
+        response = requests.get(url)
+        data = response.json()
+
+        periods = data['properties']['periods']
+        keys = ['temperature', 'startTime', 'endTime', 'icon', 'detailedForecast']
+        filtered_data = [{k: v for k, v in item.items() if k in keys} for item in periods]
+        print(json.dumps(filtered_data, indent = 4))
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
