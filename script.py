@@ -10,8 +10,16 @@ from PIL import Image,ImageDraw,ImageFont
 sys.path.append(os.path.join(os.path.dirname(__file__), 'waveshare_epd'))
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
-font_path = os.path.join(project_dir, 'fonts', 'Sansation-Regular.ttf')
-bold_font_path = os.path.join(project_dir, 'fonts', 'Sansation-Regular.ttf')
+font_path = os.path.join(project_dir, 'assets', 'fonts', 'Sansation-Regular.ttf')
+bold_font_path = os.path.join(project_dir, 'assets', 'fonts', 'Sansation-Regular.ttf')
+icons_path = os.path.join(project_dir, 'assets', 'weather', '128')
+
+WEATHER_ICONS = {
+    "Mostly Sunny": "day_clear.png",
+}
+
+def center_justified_x(draw_image, mid_x, text, font):
+    return mid_x - draw_image.textlength(text, font) / 2
 
 def get_coordinates():
     try:
@@ -21,6 +29,9 @@ def get_coordinates():
     except Exception as e:
         print(f"Error: {e}")
 
+def get_weather_icon(condition) -> Image.Image:
+    filename = WEATHER_ICONS.get(condition)
+    return Image.open(f"{icons_path}/{filename}").convert("1")
 
 def main():
     print("Initializing display...")
@@ -36,10 +47,10 @@ def main():
         response = requests.get(f"https://api.weather.gov/points/{lat},{lon}")
         data = response.json()
         city = data['properties']['relativeLocation']['properties']['city']
-        url = data['properties']['forecast']
+        url = data['properties']['forecastHourly']
         response = requests.get(url)
         data = response.json()
-        periods = data['properties']['periods']
+        periods = data['properties']['periods'][:5]
         print(json.dumps(periods, indent = 4))
     except Exception as e:
         print(f"Error fetching weather data: {e}")
@@ -52,11 +63,9 @@ def main():
     # Fonts
     font24 = ImageFont.truetype(font_path, 24)
     font48 = ImageFont.truetype(font_path, 48)
-    font72 = ImageFont.truetype(font_path, 72)
     bold24 = ImageFont.truetype(bold_font_path, 24)
     bold36 = ImageFont.truetype(bold_font_path, 36)
     bold48 = ImageFont.truetype(bold_font_path, 48)
-    bold72 = ImageFont.truetype(bold_font_path, 72)
 
     # Title
     title = f"{city} Forecast"
@@ -64,15 +73,29 @@ def main():
     line_end_x = 10 + draw_image.textlength(title, font = bold48)
     draw_image.line((10, 60, line_end_x, 60), fill = 0)
 
-    # Today/Tonight
+    # Current
+    font_current = bold36
     current_period = periods[0]
-    current_name = current_period["name"]
-    draw_image.rectangle((10, 130, 310, 410))
-    x = 20
-    y = 150
-    draw_image.text((x, y), current_name, font = bold36, fill = 0)
-    draw_image.text((x, 310), f"{current_period["temperature"]}°", font = bold36, fill = 0)
-    draw_image.text((x, 350), current_period["shortForecast"], font = bold36, fill = 0)
+    x1 = 10
+    y1 = 130
+    x2 = 260
+    y2 = 410
+    mid_x = (x1 + x2) / 2
+    padding = 10
+    draw_image.rectangle((x1, y1, x2, y2))
+
+    time = datetime.fromisoformat(current_period["startTime"]).strftime("%#I %p")
+    draw_image.text((center_justified_x(draw_image, mid_x, time, font_current), y1 + padding), time, font = font_current, fill = 0)
+
+    icon = get_weather_icon(current_period["shortForecast"])
+    icon = icon.resize((96, 96), Image.Resampling.NEAREST)
+    image.paste(icon, (135 - 48, 200))
+
+    temp = f"{current_period["temperature"]}°"
+    draw_image.text((center_justified_x(draw_image, mid_x, temp, font_current), 310), temp, font = font_current, fill = 0)
+
+    conditions = current_period["shortForecast"]
+    draw_image.text((center_justified_x(draw_image, mid_x, conditions, font_current), 360), conditions, font = font_current, fill = 0)
 
     # Future Days
     future_days = []
@@ -80,8 +103,9 @@ def main():
         if period["isDaytime"] == True:
             future_days.append(period)
 
-    # epd.display(epd.getbuffer(image), epd.getbuffer(red_image))
-    epd.sleep()
+    epd.display(epd.getbuffer(image), epd.getbuffer(red_image))
+
+    # epd.sleep()
 
 if __name__ == "__main__":
     main()
