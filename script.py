@@ -16,12 +16,22 @@ icons_path = os.path.join(project_dir, 'assets', 'weather')
 
 WEATHER_ICONS = {
     "day": {
-        "Mostly Sunny": "day_clear.png",
+        "Cloudy": "cloud.fill@3x.png",
+        "Mostly Sunny": "sun.max.fill@3x.png",
+        "Partly Sunny": "cloud.sun.fill@3x.png",
+        "Sunny": "sun.max.fill@3x.png",
     },
     "night": {
-        "Partly Cloudy": "night_partial_cloud.png",
+        "Partly Cloudy": "cloud.moon@3x.png",
     },
 }
+
+# Fonts
+font24 = ImageFont.truetype(font_path, 24)
+font48 = ImageFont.truetype(font_path, 48)
+bold24 = ImageFont.truetype(bold_font_path, 24)
+bold36 = ImageFont.truetype(bold_font_path, 36)
+bold48 = ImageFont.truetype(bold_font_path, 48)
 
 def center_justified_x(draw_image, mid_x, text, font):
     return mid_x - draw_image.textlength(text, font) / 2
@@ -38,6 +48,53 @@ def get_weather_icon(condition, isDaytime) -> Image.Image:
     daytime = "day" if isDaytime else "night"
     filename = WEATHER_ICONS[daytime].get(condition)
     return Image.open(f"{icons_path}/{filename}")
+
+def draw_current_weather(image, draw_image, current_period):
+    font_current = bold36
+
+    # Border
+    x1 = 10
+    y1 = 130
+    x2 = 260
+    y2 = 410
+    mid_x = (x1 + x2) / 2
+    padding = 10
+    draw_image.rectangle((x1, y1, x2, y2))
+
+    # Time
+    time = datetime.fromisoformat(current_period["startTime"]).strftime("%-I %p")
+    draw_image.text((center_justified_x(draw_image, mid_x, time, font_current), y1 + padding), time, font = font_current, fill = 0)
+
+    # Icon
+    icon = get_weather_icon(
+        current_period["shortForecast"],
+        current_period["isDaytime"]
+    )
+    icon_size = 96
+    # icon = icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+    icon_bg = Image.new("L", icon.size, 255)
+    icon_bg.paste(0, mask=icon.getchannel("A"))
+    image.paste(icon_bg, (int((x1 + x2) / 2 - icon_size / 2), 200))
+
+    # Temp
+    temp = f"{current_period["temperature"]}°"
+    draw_image.text((center_justified_x(draw_image, mid_x, temp, font_current), 310), temp, font = font_current, fill = 0)
+
+    # Conditions
+    conditions = current_period["shortForecast"]
+    draw_image.text((center_justified_x(draw_image, mid_x, conditions, font_current), 360), conditions, font = font_current, fill = 0)
+
+def draw_forecasted_weather(image, draw_image, i, period):
+    font = bold24
+
+    # Border
+    x1 = 260 + int((790 - 260) / 4) * (i // 4)
+    y1 = 130
+    x2 = 392 + int((790 - 260) / 4) * (i // 4)
+    y2 = 410
+    mid_x = (x1 + x2) / 2
+    padding = 10
+    draw_image.rectangle((x1, y1, x2, y2))
 
 def main():
     print("Initializing display...")
@@ -56,7 +113,7 @@ def main():
         url = data['properties']['forecastHourly']
         response = requests.get(url)
         data = response.json()
-        periods = data['properties']['periods'][:5]
+        periods = data['properties']['periods'][:17]
         print(json.dumps(periods, indent = 4))
     except Exception as e:
         print(f"Error fetching weather data: {e}")
@@ -66,55 +123,21 @@ def main():
     draw_image = ImageDraw.Draw(image)
     draw_red = ImageDraw.Draw(red_image)
 
-    # Fonts
-    font24 = ImageFont.truetype(font_path, 24)
-    font48 = ImageFont.truetype(font_path, 48)
-    bold24 = ImageFont.truetype(bold_font_path, 24)
-    bold36 = ImageFont.truetype(bold_font_path, 36)
-    bold48 = ImageFont.truetype(bold_font_path, 48)
-
     # Title
     title = f"{city} Forecast"
     draw_image.text((10, 10), title, font = bold48, fill = 0)
     line_end_x = 10 + draw_image.textlength(title, font = bold48)
     draw_image.line((10, 60, line_end_x, 60), fill = 0)
 
-    # Current
-    font_current = bold36
-    current_period = periods[0]
-    x1 = 10
-    y1 = 130
-    x2 = 260
-    y2 = 410
-    mid_x = (x1 + x2) / 2
-    padding = 10
-    draw_image.rectangle((x1, y1, x2, y2))
+    draw_current_weather(image, draw_image, periods[0])
 
-    time = datetime.fromisoformat(current_period["startTime"]).strftime("%-I %p")
-    draw_image.text((center_justified_x(draw_image, mid_x, time, font_current), y1 + padding), time, font = font_current, fill = 0)
-
-    icon = get_weather_icon(current_period["shortForecast"], current_period["isDaytime"])
-    r, g, b, a = icon.split()
-    black = Image.new("L", icon.size, 0)
-    icon = Image.merge("RGBA", (black, black, black, a))
-    icon = icon.resize((96, 96), Image.Resampling.LANCZOS)
-    image.paste(icon, (135 - 48, 200), icon)
-
-    temp = f"{current_period["temperature"]}°"
-    draw_image.text((center_justified_x(draw_image, mid_x, temp, font_current), 310), temp, font = font_current, fill = 0)
-
-    conditions = current_period["shortForecast"]
-    draw_image.text((center_justified_x(draw_image, mid_x, conditions, font_current), 360), conditions, font = font_current, fill = 0)
-
-    # Future Days
-    future_days = []
-    for period in periods[1:]:
-        if period["isDaytime"] == True:
-            future_days.append(period)
+    for i in range(1, 17, 4):
+        draw_forecasted_weather(image, draw_image, i, periods[i])
 
     epd.display(epd.getbuffer(image), epd.getbuffer(red_image))
 
     # epd.sleep()
+
 
 if __name__ == "__main__":
     main()
