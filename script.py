@@ -5,17 +5,22 @@ import json
 from datetime import datetime
 
 from waveshare_epd import epd7in5b_V2
-from PIL import Image,ImageDraw,ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'waveshare_epd'))
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
 font_path = os.path.join(project_dir, 'assets', 'fonts', 'Sansation-Regular.ttf')
 bold_font_path = os.path.join(project_dir, 'assets', 'fonts', 'Sansation-Regular.ttf')
-icons_path = os.path.join(project_dir, 'assets', 'weather', '128')
+icons_path = os.path.join(project_dir, 'assets', 'weather')
 
 WEATHER_ICONS = {
-    "Mostly Sunny": "day_clear.png",
+    "day": {
+        "Mostly Sunny": "day_clear.png",
+    },
+    "night": {
+        "Partly Cloudy": "night_partial_cloud.png",
+    },
 }
 
 def center_justified_x(draw_image, mid_x, text, font):
@@ -29,9 +34,10 @@ def get_coordinates():
     except Exception as e:
         print(f"Error: {e}")
 
-def get_weather_icon(condition) -> Image.Image:
-    filename = WEATHER_ICONS.get(condition)
-    return Image.open(f"{icons_path}/{filename}").convert("1")
+def get_weather_icon(condition, isDaytime) -> Image.Image:
+    daytime = "day" if isDaytime else "night"
+    filename = WEATHER_ICONS[daytime].get(condition)
+    return Image.open(f"{icons_path}/{filename}")
 
 def main():
     print("Initializing display...")
@@ -84,12 +90,15 @@ def main():
     padding = 10
     draw_image.rectangle((x1, y1, x2, y2))
 
-    time = datetime.fromisoformat(current_period["startTime"]).strftime("%#I %p")
+    time = datetime.fromisoformat(current_period["startTime"]).strftime("%-I %p")
     draw_image.text((center_justified_x(draw_image, mid_x, time, font_current), y1 + padding), time, font = font_current, fill = 0)
 
-    icon = get_weather_icon(current_period["shortForecast"])
-    icon = icon.resize((96, 96), Image.Resampling.NEAREST)
-    image.paste(icon, (135 - 48, 200))
+    icon = get_weather_icon(current_period["shortForecast"], current_period["isDaytime"])
+    r, g, b, a = icon.split()
+    black = Image.new("L", icon.size, 0)
+    icon = Image.merge("RGBA", (black, black, black, a))
+    icon = icon.resize((96, 96), Image.Resampling.LANCZOS)
+    image.paste(icon, (135 - 48, 200), icon)
 
     temp = f"{current_period["temperature"]}°"
     draw_image.text((center_justified_x(draw_image, mid_x, temp, font_current), 310), temp, font = font_current, fill = 0)
