@@ -71,10 +71,9 @@ def draw_current_weather(image, draw_image, current_period):
         current_period["isDaytime"]
     )
     icon_size = 96
-    # icon = icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
     icon_bg = Image.new("L", icon.size, 255)
     icon_bg.paste(0, mask=icon.getchannel("A"))
-    image.paste(icon_bg, (int((x1 + x2) / 2 - icon_size / 2), 200))
+    image.paste(icon_bg, (int(mid_x - icon_size / 2), 200))
 
     # Temp
     temp = f"{current_period["temperature"]}°"
@@ -85,16 +84,34 @@ def draw_current_weather(image, draw_image, current_period):
     draw_image.text((center_justified_x(draw_image, mid_x, conditions, font_current), 360), conditions, font = font_current, fill = 0)
 
 def draw_forecasted_weather(image, draw_image, i, period):
-    font = bold24
+    forecast_font = bold36
 
     # Border
-    x1 = 260 + int((790 - 260) / 4) * (i // 4)
+    x1 = 260 + int((790 - 260) / 4) * (i - 1)
     y1 = 130
-    x2 = 392 + int((790 - 260) / 4) * (i // 4)
+    x2 = 392 + int((790 - 260) / 4) * (i - 1)
     y2 = 410
     mid_x = (x1 + x2) / 2
     padding = 10
     draw_image.rectangle((x1, y1, x2, y2))
+
+    # Time
+    time = datetime.fromisoformat(period["startTime"]).strftime("%-I %p")
+    draw_image.text((center_justified_x(draw_image, mid_x, time, forecast_font), y1 + padding), time, font = forecast_font, fill = 0)
+
+    # Icon
+    icon = get_weather_icon(
+        period["shortForecast"],
+        period["isDaytime"]
+    )
+    icon_bg = Image.new("L", icon.size, 255)
+    icon_bg.paste(0, mask=icon.getchannel("A"))
+    # icon_bg = icon_bg.resize((72, 72), Image.Resampling.LANCZOS)
+    image.paste(icon_bg, (int(mid_x - icon_bg.width / 2), 200))
+
+    # Temp
+    temp = f"{period["temperature"]}°"
+    draw_image.text((center_justified_x(draw_image, mid_x, temp, forecast_font), 310), temp, font = forecast_font, fill = 0)
 
 def main():
     print("Initializing display...")
@@ -113,7 +130,7 @@ def main():
         url = data['properties']['forecastHourly']
         response = requests.get(url)
         data = response.json()
-        periods = data['properties']['periods'][:17]
+        periods = data['properties']['periods'][:5]
         print(json.dumps(periods, indent = 4))
     except Exception as e:
         print(f"Error fetching weather data: {e}")
@@ -131,7 +148,7 @@ def main():
 
     draw_current_weather(image, draw_image, periods[0])
 
-    for i in range(1, 17, 4):
+    for i in range(1, 5):
         draw_forecasted_weather(image, draw_image, i, periods[i])
 
     epd.display(epd.getbuffer(image), epd.getbuffer(red_image))
