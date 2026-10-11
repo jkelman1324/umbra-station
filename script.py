@@ -1,12 +1,20 @@
-import sys
+import json
+import logging
 import os
 import requests
-import json
+import sys
 
 from datetime import datetime
 from time import sleep
 from waveshare_epd import epd7in5b_V2
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+logging.basicConfig(
+    filename="umbra-station.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'waveshare_epd'))
 
@@ -22,6 +30,7 @@ WEATHER_ICONS = {
         "Mostly Sunny": "sun.max@3x.png",
         "Partly Sunny": "cloud.sun@3x.png",
         "Patchy Drizzle": "cloud.drizzle@3x.png",
+        "Rain Showers": "cloud.rain@3x.png",
         "Sunny": "sun.max@3x.png",
     },
     "night": {
@@ -29,6 +38,7 @@ WEATHER_ICONS = {
         "Mostly Cloudy": "cloud@3x.png",
         "Partly Cloudy": "cloud.moon@3x.png",
         "Patchy Drizzle": "cloud.drizzle@3x.png",
+        "Rain Showers": "cloud.rain@3x.png",
     },
 }
 
@@ -54,6 +64,7 @@ def get_weather_icon(condition, isDaytime) -> Image.Image:
     daytime = "day" if isDaytime else "night"
     filename = WEATHER_ICONS[daytime].get(condition)
     if filename is None:
+        logger.info(f"Missing icon for '{daytime}': {condition}")
         filename = "questionmark@3x.png"
 
     return Image.open(f"{icons_path}/{filename}")
