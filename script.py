@@ -25,20 +25,24 @@ icons_path = os.path.join(project_dir, 'assets', 'weather')
 
 WEATHER_ICONS = {
     "day": {
+        "Chance Rain Showers": "cloud.sun.rain@3x.png",
         "Cloudy": "cloud@3x.png",
         "Mostly Cloudy": "cloud@3x.png",
         "Mostly Sunny": "sun.max@3x.png",
         "Partly Sunny": "cloud.sun@3x.png",
         "Patchy Drizzle": "cloud.drizzle@3x.png",
         "Rain Showers": "cloud.rain@3x.png",
+        "Slight Chance Rain Showers": "cloud.sun.rain@3x.png",
         "Sunny": "sun.max@3x.png",
     },
     "night": {
+        "Chance Rain Showers": "cloud.moon.rain@3x.png",
         "Mostly Clear": "moon@3x.png",
         "Mostly Cloudy": "cloud@3x.png",
         "Partly Cloudy": "cloud.moon@3x.png",
         "Patchy Drizzle": "cloud.drizzle@3x.png",
         "Rain Showers": "cloud.rain@3x.png",
+        "Slight Chance Rain Showers": "cloud.moon.rain@3x.png",
     },
 }
 
@@ -48,6 +52,13 @@ font48 = ImageFont.truetype(font_path, 48)
 bold24 = ImageFont.truetype(bold_font_path, 24)
 bold36 = ImageFont.truetype(bold_font_path, 36)
 bold48 = ImageFont.truetype(bold_font_path, 48)
+
+def adjusted_font(draw_image, text, font, font_size):
+    while (draw_image.textlength(text, font) > 240):
+        font_size -= 2
+        font = ImageFont.truetype(bold_font_path, font_size)
+
+    return font
 
 def center_justified_x(draw_image, mid_x, text, font):
     return mid_x - draw_image.textlength(text, font) / 2
@@ -101,7 +112,8 @@ def draw_current_weather(image, draw_image, current_period):
 
     # Conditions
     conditions = current_period["shortForecast"]
-    draw_image.text((center_justified_x(draw_image, mid_x, conditions, font_current), 360), conditions, font = font_current, fill = 0)
+    conditions_font = adjusted_font(draw_image, conditions, font_current, 36)
+    draw_image.text((center_justified_x(draw_image, mid_x, conditions, conditions_font), 360), conditions, font = conditions_font, fill = 0)
 
 def draw_forecasted_weather(image, draw_image, i, period):
     forecast_font = bold36
