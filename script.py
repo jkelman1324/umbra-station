@@ -33,8 +33,8 @@ WEATHER_ICONS = {
         "Patchy Drizzle": "cloud.drizzle@3x.png",
         "Rain": "cloud.rain@3x.png",
         "Rain Showers": "cloud.rain@3x.png",
-        "Slight Chance Light Rain": "cloud.sun.rain@3x.png",
-        "Slight Chance Rain Showers": "cloud.sun.rain@3x.png",
+        "Slight Chance Light Rain": "cloud.rain@3x.png",
+        "Slight Chance Rain Showers": "cloud.rain@3x.png",
         "Sunny": "sun.max@3x.png",
     },
     "night": {
@@ -47,8 +47,8 @@ WEATHER_ICONS = {
         "Patchy Drizzle": "cloud.drizzle@3x.png",
         "Rain": "cloud.rain@3x.png",
         "Rain Showers": "cloud.rain@3x.png",
-        "Slight Chance Light Rain": "cloud.moon.rain@3x.png",
-        "Slight Chance Rain Showers": "cloud.moon.rain@3x.png",
+        "Slight Chance Light Rain": "cloud.rain@3x.png",
+        "Slight Chance Rain Showers": "cloud.rain@3x.png",
     },
 }
 
